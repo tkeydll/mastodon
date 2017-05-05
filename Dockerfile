@@ -6,6 +6,13 @@ LABEL maintainer="https://github.com/tootsuite/mastodon" \
 ENV RAILS_ENV=production \
     NODE_ENV=production
 
+ARG http_proxy="http://your.host:8080"
+ARG https_proxy="https://your.host:8080"
+
+ENV http_proxy=${http_proxy}
+ENV https_proxy=${https_proxy}
+
+
 EXPOSE 3000 4000
 
 WORKDIR /mastodon
@@ -28,15 +35,23 @@ RUN echo "@edge https://nl.alpinelinux.org/alpine/edge/main" >> /etc/apk/reposit
     ffmpeg \
     file \
     imagemagick@edge \
-    ca-certificates \
- && npm install -g npm@3 && npm install -g yarn \
+    ca-certificates
+
+RUN  npm -g config set proxy ${http_proxy} \
+ && npm -g config set https-proxy ${https_proxy}
+
+RUN npm install -g npm@3 && npm install -g yarn \
  && update-ca-certificates \
  && rm -rf /tmp/* /var/cache/apk/*
 
 COPY Gemfile Gemfile.lock package.json yarn.lock /mastodon/
 
-RUN bundle install --deployment --without test development \
- && yarn --ignore-optional --pure-lockfile
+RUN bundle install --deployment --without test development
+
+RUN yarn config set proxy ${http_proxy} \
+ && yarn config set https-proxy ${http_proxy}
+
+RUN yarn --ignore-optional --pure-lockfile
 
 COPY . /mastodon
 
